@@ -1,0 +1,44 @@
+from typing import Any
+import paho.mqtt.client as mqtt
+import logging
+import coloredlogs
+import os
+from ._app.player import PlaySoundPlayBytes
+
+logger = logging.getLogger("audioserver")
+coloredlogs.install(
+    logger=logger, level=logging._nameToLevel[os.environ.get("LOG_LEVEL", "DEBUG")]
+)
+
+
+class Main:
+    def __init__(self, site_id: str):
+        self._client = mqtt.Client()
+        self._play_bytes_topic = f"hermes/audioServer/{site_id}/playBytes/+"
+
+        def on_connect(client: mqtt.Client, userdata: Any, flags: int, rc: int):
+            """The connect handler."""
+            client.subscribe(self._play_bytes_topic)
+            logger.info(f"Connected to broker")
+            logger.debug(f"Subscribed to {self._play_bytes_topic} (siteId = {site_id})")
+
+        def on_message(client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage):
+            """The message handler."""
+            if msg.topic.startswith(self._play_bytes_topic.rsplit("/", 1)[0]):
+                request_id = msg.topic.split("/")[-1]
+                wav_bytes = msg.payload
+                logger.debug(f"Received play bytes request {request_id}")
+                play_bytes = PlaySoundPlayBytes()
+                play_bytes.execute(wav_bytes)
+
+        self._client.on_connect = on_connect
+        self._client.on_message = on_message
+
+    def loop_forever(self, host: str, port: int = 1883):
+        """Loop forever.
+
+        Args:
+            endpoint: The MQTT broker endpoint.
+        """
+        self._client.connect(host, port)
+        self._client.loop_forever()
