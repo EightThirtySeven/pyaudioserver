@@ -17,13 +17,13 @@ coloredlogs.install(
 
 
 class Main:
-    def __init__(self, site_id: str):
+    def __init__(self, site_id: str, sample_rate: int, duration: float):
         self._client = mqtt.Client()
         self._play_bytes_topic = f"hermes/audioServer/{site_id}/playBytes/+"
         self._play_finished_topic = f"hermes/audioServer/{site_id}/playFinished"
         self._play_bytes = PlaySoundPlayBytes()
         self._record_chunks = RecordChunksSoundDevice(
-            PublishChunkMQTT(self._client, site_id)
+            PublishChunkMQTT(self._client, site_id), sample_rate, duration
         )
 
         def on_connect(client: mqtt.Client, userdata: Any, flags: int, rc: int):

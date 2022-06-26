@@ -10,10 +10,18 @@ from .._domain.record_chunks import RecordChunks
 
 
 class RecordChunksSoundDevice(RecordChunks):
-    def __init__(self, publish_chunk: PublishChunk):
+    """Record chunks using sounddevice."""
+
+    def __init__(self, publish_chunk: PublishChunk, sample_rate: int, duration: float):
+        """
+        Args:
+            publish_chunk: The business logic for publishing a chunk.
+            sample_rate: The sampling rate.
+            duration: The chunk duration.
+        """
         super().__init__(publish_chunk)
-        self._sample_rate = 16000
-        self._chunk_duration = 1
+        self._sample_rate = sample_rate
+        self._chunk_duration = duration
         self._shutdown = threading.Event()
 
         def streaming_thread(shutdown: threading.Event, publish_chunk: PublishChunk):
