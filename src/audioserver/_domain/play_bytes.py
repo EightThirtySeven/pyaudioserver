@@ -8,5 +8,6 @@ class PlayBytes(ABC):
 
         Args:
             wav_data: Bytes formatted as a valid WAV file.
+            on_complete: The callback for when the bytes finish playing.
         """
         pass

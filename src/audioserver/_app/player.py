@@ -1,17 +1,19 @@
-from dataclasses import dataclass
+import queue
 import tempfile
+import threading
+from dataclasses import dataclass
 from os.path import join
 from typing import Callable
 
 from playsound import playsound
 
 from .._domain.play_bytes import PlayBytes
-import queue
-import threading
 
 
 @dataclass
 class PlayWavChunk:
+    """A data class to encapsulate WAV playback request information."""
+
     data: bytes
     on_complete: Callable[[], None]
 

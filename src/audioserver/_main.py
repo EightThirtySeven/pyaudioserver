@@ -1,10 +1,14 @@
 import json
-from typing import Any
-import paho.mqtt.client as mqtt
 import logging
-import coloredlogs
 import os
+from typing import Any
+
+import coloredlogs
+import paho.mqtt.client as mqtt
+
 from ._app.player import PlaySoundPlayBytes
+from ._app.publish_chunk_mqtt import PublishChunkMQTT
+from ._app.record_chunks_sounddevice import RecordChunksSoundDevice
 
 logger = logging.getLogger("audioserver")
 coloredlogs.install(
@@ -18,12 +22,16 @@ class Main:
         self._play_bytes_topic = f"hermes/audioServer/{site_id}/playBytes/+"
         self._play_finished_topic = f"hermes/audioServer/{site_id}/playFinished"
         self._play_bytes = PlaySoundPlayBytes()
+        self._record_chunks = RecordChunksSoundDevice(
+            PublishChunkMQTT(self._client, site_id)
+        )
 
         def on_connect(client: mqtt.Client, userdata: Any, flags: int, rc: int):
             """The connect handler."""
             client.subscribe(self._play_bytes_topic)
             logger.info(f"Connected to broker")
             logger.debug(f"Subscribed to {self._play_bytes_topic} (siteId = {site_id})")
+            self._record_chunks.start()
 
         def on_message(client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage):
             """The message handler."""
@@ -52,4 +60,5 @@ class Main:
         try:
             self._client.loop_forever()
         except KeyboardInterrupt:
+            self._record_chunks.stop()
             self._play_bytes.shutdown()
