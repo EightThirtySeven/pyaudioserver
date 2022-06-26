@@ -1,3 +1,4 @@
+import json
 from typing import Any
 import paho.mqtt.client as mqtt
 import logging
@@ -15,6 +16,8 @@ class Main:
     def __init__(self, site_id: str):
         self._client = mqtt.Client()
         self._play_bytes_topic = f"hermes/audioServer/{site_id}/playBytes/+"
+        self._play_finished_topic = f"hermes/audioServer/{site_id}/playFinished"
+        self._play_bytes = PlaySoundPlayBytes()
 
         def on_connect(client: mqtt.Client, userdata: Any, flags: int, rc: int):
             """The connect handler."""
@@ -28,8 +31,13 @@ class Main:
                 request_id = msg.topic.split("/")[-1]
                 wav_bytes = msg.payload
                 logger.debug(f"Received play bytes request {request_id}")
-                play_bytes = PlaySoundPlayBytes()
-                play_bytes.execute(wav_bytes)
+
+                def on_complete():
+                    client.publish(
+                        self._play_finished_topic, json.dumps({"id": request_id})
+                    )
+
+                self._play_bytes.execute(wav_bytes, on_complete)
 
         self._client.on_connect = on_connect
         self._client.on_message = on_message
@@ -41,4 +49,7 @@ class Main:
             endpoint: The MQTT broker endpoint.
         """
         self._client.connect(host, port)
-        self._client.loop_forever()
+        try:
+            self._client.loop_forever()
+        except KeyboardInterrupt:
+            self._play_bytes.shutdown()
